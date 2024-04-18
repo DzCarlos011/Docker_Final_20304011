@@ -1,71 +1,99 @@
 name: CD-CI Carlos
 
-#env:
-#  AZURE_WEBAPP_NAME: ""
+# Define las variables de entorno
+env:
+  AZURE_WEBAPP_NAME: "carlos-rdz-Docker"
 
+# Define los eventos que desencadenarán el flujo de trabajo
 on:
+  # Se ejecutará en pushs a las ramas
   push:
     branches:
       - "main"
       - "develop"
+  # Se ejecutará en pull requests
   pull_request:
     branches:
       - "main"
       - "develop"
 
+# Define los trabajos del flujo de trabajo
 jobs:
+  # Trabajo de pruebas
   test:
     runs-on: ubuntu-latest
     steps:
+      # Clona el código del repositorio
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Instala la versión 20.x de Node.js
       - name: Use Node.js 20.x
         uses: actions/setup-node@v4
         with:
           node-version: "20.x"
 
+      # Instala las dependencias del proyecto
       - name: Install dependencies
         run: npm install
 
+      # Ejecuta las pruebas unitarias y de integración
       - name: Run unit and integration test
         run: npm run test
 
+      # Ejecuta el análisis de código
       - name: Run code laster
         run: npm run last
 
+  # Trabajo de construcción y empuje de la imagen de Docker a Docker Hub
   build:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
+      # Clona el código del repositorio
+      - name: Checkout
         uses: actions/checkout@v4
-      -
-        name: Login to Docker Hub
+
+      # Inicia sesión en Docker Hub con las credenciales proporcionadas como secretos
+      - name: Login to Docker Hub
         uses: docker/login-actions@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Set up Docker Buildx
+
+      # Configura Docker Buildx para construir la imagen
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      -
-        name: Build and push
+
+      # Construye y empuja la imagen de Docker a Docker Hub
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/ESTE API-POC=LASTEST
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/API-POC=LASTEST
+
+  # Trabajo de despliegue en Azure Web App
   deploys:
     runs-on: ubuntu-latest
     needs: build
 
     steps:
+    # Clona el código del repositorio
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # Inicia sesión en Azure con las credenciales proporcionadas como secretos
+    - name: Login to Azure
+      uses: azure/login@v3
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    # Despliega la imagen de Docker en Azure Web App
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v3
       id: deploy-to-webapp
       with:
-        app-name: ${{ env.AZURE_WEBAPP_NAME }} # Replace with your app name
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE  }} # Define secret variable in repository settings as per action documentation
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         image: ${{ secrets.DOCKERHUB_USERNAME }}/API-POC=LASTEST
