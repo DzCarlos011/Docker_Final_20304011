@@ -1,9 +1,5 @@
 name: CD-CI Carlos
 
-# Define las variables de entorno
-env:
-  AZURE_WEBAPP_NAME: "carlos-rdz-Docker"
-
 # Define los eventos que desencadenarán el flujo de trabajo
 on:
   # Se ejecutará en pushs a las ramas
@@ -16,7 +12,6 @@ on:
     branches:
       - "main"
       - "develop"
-
 # Define los trabajos del flujo de trabajo
 jobs:
   # Trabajo de pruebas
@@ -40,10 +35,6 @@ jobs:
       # Ejecuta las pruebas unitarias y de integración
       - name: Run unit and integration test
         run: npm run test
-
-      # Ejecuta el análisis de código
-      - name: Run code laster
-        run: npm run last
 
   # Trabajo de construcción y empuje de la imagen de Docker a Docker Hub
   build:
@@ -71,29 +62,4 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/API-POC=LASTEST
-
-  # Trabajo de despliegue en Azure Web App
-  deploys:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-    # Clona el código del repositorio
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    # Inicia sesión en Azure con las credenciales proporcionadas como secretos
-    - name: Login to Azure
-      uses: azure/login@v3
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    # Despliega la imagen de Docker en Azure Web App
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v3
-      id: deploy-to-webapp
-      with:
-        app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        image: ${{ secrets.DOCKERHUB_USERNAME }}/API-POC=LASTEST
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/clockbox:latest
